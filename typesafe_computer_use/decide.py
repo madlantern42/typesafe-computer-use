@@ -74,42 +74,35 @@ def kind_criteria(browser: str, email: str | None, offscreen: bool = False) -> d
     return {**clicks, **fixed_actions(browser, email)}
 
 
-ROW_MATES = 3  # how many neighbours name a duplicated item's row in a criterion; the history line takes them all
+ROW_MATES = 3  # neighbours identifying a duplicated item's row in state; the history line takes them all
 
 
-def row_mates(items: list[Item], limit: int | None = ROW_MATES) -> dict[int, list[str]]:
-    """Item index -> the texts sharing its row, left to right, for every item whose text another item repeats.
-
-    Three rows of events each end in a 'Buy'. The label says nothing about which; the row does,
-    and the row is a fact the layout holds, so the code reads it and hands it over. `limit`
-    keeps a criterion short; None takes the whole row, for a line that has to identify it.
-    """
+def _row_mate_items(items: list[Item], limit: int | None = ROW_MATES) -> dict[int, list[Item]]:
+    """Neighbours in reading order for items whose labels appear more than once."""
     counts = Counter(it.text for it in items)
-    out: dict[int, list[str]] = {}
+    out: dict[int, list[Item]] = {}
     for it in items:
         if counts[it.text] < 2:
             continue
         cy, half = it.center[1], max(1.0, it.y2 - it.y1) / 2
         mates = sorted((o for o in items if o is not it and abs(o.center[1] - cy) < half), key=lambda o: o.x1)
         if mates:
-            out[it.index] = [o.text for o in mates[:limit]]
+            out[it.index] = mates[:limit]
     return out
 
 
+def row_mates(items: list[Item], limit: int | None = ROW_MATES) -> dict[int, list[str]]:
+    """Texts sharing a duplicated item's row, for readable action history.
+
+    Three rows of events each end in a 'Buy'. The label says nothing about which; the row does.
+    None takes the whole row, for a history line that has to identify it.
+    """
+    return {index: [mate.text for mate in mates] for index, mates in _row_mate_items(items, limit).items()}
+
+
 def item_criteria(screen: Screen, items: list[Item]) -> dict[str, str]:
-    """Each item as one line. A role prefix marks the ones the app itself declared, and a
-    duplicated label carries its row."""
-    hints = date_hints(items, screen)
-    mates = row_mates(items)
-    return {
-        str(it.index): (
-            f"{it.role + ' ' if it.from_ax and it.role else ''}{it.text!r} "
-            f"({screen.region(it)}"
-            f"{'; ' + hints[it.index] if it.index in hints else ''}"
-            f"{'; in the row of ' + ', '.join(repr(t) for t in mates[it.index]) if it.index in mates else ''})"
-        )
-        for it in items
-    }
+    """Every candidate remains selectable; its full description lives once in shared state."""
+    return {str(it.index): f"Item {it.index} from screen_items_in_reading_order" for it in items}
 
 
 def offscreen_criteria(nodes: list[AxNode]) -> dict[str, str]:
@@ -143,7 +136,7 @@ def base_state(
     earlier in the run, each of which led back here: a fact the code knows and the model cannot.
     `guidance` is what the writer and the user added to the goal when the classifier last stopped."""
     hints = date_hints(items, screen)
-    mates = row_mates(items)
+    mates = {index: [mate.index for mate in neighbors] for index, neighbors in _row_mate_items(items).items()}
     return {
         "goal": goal,
         **(guidance.state() if guidance else {}),
@@ -160,7 +153,7 @@ def base_state(
                 "where": screen.region(it),
                 **({"role": it.role} if it.role else {}),
                 **({"when": hints[it.index]} if it.index in hints else {}),
-                **({"beside": mates[it.index]} if it.index in mates else {}),
+                **({"beside_item_ids": mates[it.index]} if it.index in mates else {}),
             }
             for it in items
         ],
@@ -242,7 +235,10 @@ def decide(
     if items:
         questions["item"] = Choice(
             instructions=(
-                "If clicking an on-screen item is the right move, which item? Items marked with a "
+                "If clicking an on-screen item is the right move, which item? Each option number "
+                "matches an item's `i` in `screen_items_in_reading_order`. Read its text, role, "
+                "location and date there. `beside_item_ids` lists the `i` values of neighbouring "
+                "items on the same row; use their text to distinguish repeated labels. Items marked with a "
                 "role come from the app's accessibility tree and are real controls; plain items are "
                 "text read from the screen."
             ),

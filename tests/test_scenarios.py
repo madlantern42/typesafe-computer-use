@@ -929,10 +929,15 @@ def test_l32b_a_feed_that_never_grows_is_a_stall(monkeypatch, tmp_path):
     assert state.history == ["clicked 'Load more'"] * 3
 
 
+def neighbour_texts(state: dict, item: dict) -> list[str]:
+    by_id = {entry["i"]: entry["text"] for entry in state["screen_items_in_reading_order"]}
+    return [by_id[i] for i in item.get("beside_item_ids", [])]
+
+
 def coldplay_policy(state: dict, questions: dict) -> tuple:
     """Three buttons read 'Buy'. Only the row they sit in says which show they buy."""
     for it in state["screen_items_in_reading_order"]:
-        if it["text"] == "Buy" and "Coldplay" in it.get("beside", []):
+        if it["text"] == "Buy" and "Coldplay" in neighbour_texts(state, it):
             return ("click_item", it["i"])  # by index: the text alone names three items
     return ("done", None)
 
@@ -970,11 +975,11 @@ def test_l33_duplicate_labels_are_told_apart_by_their_row(monkeypatch, tmp_path)
     assert world.log == ["click:Buy@1"]
 
     listing = world.fake.states[0]["screen_items_in_reading_order"]
-    chosen = next(it for it in listing if it["text"] == "Buy" and "Coldplay" in it.get("beside", []))
-    assert chosen["beside"] == ["Coldplay", "Oct 2"]
-    assert "in the row of 'Coldplay', 'Oct 2'" in world.fake.asked[0]["item"].criteria[str(chosen["i"])]
+    chosen = next(it for it in listing if it["text"] == "Buy" and "Coldplay" in neighbour_texts(world.fake.states[0], it))
+    assert neighbour_texts(world.fake.states[0], chosen) == ["Coldplay", "Oct 2"]
+    assert world.fake.asked[0]["item"].criteria[str(chosen["i"])] == f"Item {chosen['i']} from screen_items_in_reading_order"
     unique = next(it for it in listing if it["text"] == "Coldplay")
-    assert "beside" not in unique  # nothing else on screen reads 'Coldplay', so the row says nothing new
+    assert "beside_item_ids" not in unique  # nothing else on screen reads 'Coldplay', so the row says nothing new
 
 
 def banner_policy(state: dict, questions: dict) -> tuple:
@@ -1083,7 +1088,7 @@ def long_run_policy(state: dict, questions: dict) -> tuple:
     if field and field["label"] == "Email":
         return ("press_enter", None) if field["current_value"] else ("type_email", None)
     for it in state["screen_items_in_reading_order"]:
-        if it["text"] == "Buy" and "Coldplay" in it.get("beside", []):
+        if it["text"] == "Buy" and "Coldplay" in neighbour_texts(state, it):
             return ("click_item", it["i"])
     if "Nothing here" in texts:
         return ("go_back", None)
@@ -1288,7 +1293,7 @@ def picky_buy_policy(state: dict, questions: dict) -> tuple:
         return ("go_back", None)
     for it in state["screen_items_in_reading_order"]:
         if it["text"] == "Buy":
-            line = "clicked 'Buy' beside " + ", ".join(repr(mate) for mate in it["beside"])
+            line = "clicked 'Buy' beside " + ", ".join(repr(mate) for mate in neighbour_texts(state, it))
             if line not in state["already_tried_on_this_screen"]:
                 return ("click_item", it["i"])
     return ("none", None)

@@ -1,3 +1,4 @@
+import json
 from dataclasses import replace
 from types import SimpleNamespace
 
@@ -91,14 +92,16 @@ def test_kind_criteria_offers_email_only_when_set():
     assert "click_item" in kind_criteria("Google Chrome", None)
 
 
-def test_item_criteria_and_state_carry_region_and_dates(screen, make_item):
+def test_item_criteria_reference_state_with_full_text_region_and_dates(screen, make_item):
     items = [make_item(0, "Sale ends Oct 1, 2099", y1=100, y2=130), make_item(1, "Buy", y1=140, y2=170)]
     crit = item_criteria(screen, items)
-    assert crit["0"].startswith("'Sale ends Oct 1, 2099' (top-left; dated 2099-10-01")
-    assert "near a line dated 2099-10-01" in crit["1"]
+    assert crit == {"0": "Item 0 from screen_items_in_reading_order", "1": "Item 1 from screen_items_in_reading_order"}
     state = base_state("buy the thing", screen, items, ["opened https://example.com/"])
     assert state["goal"] == "buy the thing"
     assert state["previous_actions"] == ["opened https://example.com/"]
+    first = state["screen_items_in_reading_order"][0]
+    assert first["text"] == "Sale ends Oct 1, 2099" and first["where"] == "top-left"
+    assert first["when"].startswith("dated 2099-10-01")
     assert state["screen_items_in_reading_order"][1]["when"].startswith("near a line dated")
     assert "today" in state["now"]
 
@@ -118,14 +121,52 @@ def test_a_duplicated_label_names_its_row_and_a_unique_one_does_not(screen, make
         make_item(5, "Buy", x1=420, x2=480),
         make_item(6, "Buy", x1=420, x2=480, y1=200, y2=230),
     ]
-    assert row_mates(wide)[5] == ["Col 0", "Col 1", "Col 2"]  # a criterion stays short
+    assert row_mates(wide)[5] == ["Col 0", "Col 1", "Col 2"]  # state uses the first three references
     assert row_mates(wide, limit=None)[5] == [f"Col {i}" for i in range(5)]  # a history line takes the whole row
-    crit = item_criteria(screen, items)
-    assert crit["5"].endswith("; in the row of 'Coldplay', 'Oct 2')")
-    assert "row" not in crit["3"] and "row" not in crit["6"]
     state = base_state("buy a ticket to Coldplay", screen, items, [])
     rows = state["screen_items_in_reading_order"]
-    assert rows[5]["beside"] == ["Coldplay", "Oct 2"] and "beside" not in rows[3]
+    assert rows[5]["beside_item_ids"] == [3, 4] and "beside_item_ids" not in rows[3]
+    assert [rows[i]["text"] for i in rows[5]["beside_item_ids"]] == ["Coldplay", "Oct 2"]
+
+
+def test_dense_screen_keeps_all_candidates_without_repeating_long_row_labels(screen, make_item):
+    items = []
+    for row in range(85):
+        text = f"Candidate {row:03d}: " + "Detailed description " * 20
+        y = row * 40
+        items.extend(
+            [
+                make_item(row * 3, text, x1=10, x2=300, y1=y, y2=y + 30),
+                make_item(row * 3 + 1, "Open", x1=320, x2=380, y1=y, y2=y + 30),
+                make_item(row * 3 + 2, "More", x1=400, x2=460, y1=y, y2=y + 30),
+            ]
+        )
+
+    state = base_state("open the requested candidate", screen, items, [])
+    criteria = item_criteria(screen, items)
+    rows = state["screen_items_in_reading_order"]
+    payload = json.dumps({"state": state, "criteria": criteria})
+
+    assert len(criteria) == 255 and set(criteria) == {str(item.index) for item in items}
+    assert [row["text"] for row in rows] == [item.text for item in items]
+    for row in range(85):
+        index = row * 3
+        assert payload.count(items[index].text) == 1
+        assert rows[index + 1]["beside_item_ids"] == [index, index + 2]
+
+
+def test_row_references_use_item_ids_rather_than_array_positions(screen, make_item):
+    items = [
+        make_item(40, "First", x1=10, x2=100, y1=10, y2=30),
+        make_item(70, "Open", x1=120, x2=180, y1=10, y2=30),
+        make_item(90, "Second", x1=10, x2=100, y1=60, y2=80),
+        make_item(150, "Open", x1=120, x2=180, y1=60, y2=80),
+    ]
+
+    rows = base_state("open Second", screen, items, [])["screen_items_in_reading_order"]
+
+    assert rows[1]["beside_item_ids"] == [40] and rows[3]["beside_item_ids"] == [90]
+    assert set(item_criteria(screen, items)) == {"40", "70", "90", "150"}
 
 
 def test_a_control_parked_far_off_the_display_still_gets_a_region(screen, make_item):
