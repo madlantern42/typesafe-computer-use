@@ -161,8 +161,9 @@ different `.env` location, pass `TYPESAFE_CONFIG_PATH=/absolute/path/.env` when
 building. The path is embedded in the app's Info.plist; the key values stay in
 the local file, outside the app bundle. Keep that file private.
 
-In the app, click **Request Permissions** and grant **Screen Recording** and
-**Accessibility** in macOS System Settings. Restart the app after granting them.
+In the app, click **Request Permissions** and grant **Screen & System Audio
+Recording** and **Device Control and Data Access** in macOS System Settings →
+Privacy & Security. Restart the app after granting them.
 Enter one goal and click **Start**. This is a live run, currently limited to 20
 steps. Click **Stop** in the window or menu bar to halt before the next computer
 action, or move the pointer to the top-left corner. Runs and any errors are saved

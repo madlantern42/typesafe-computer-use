@@ -181,7 +181,7 @@ class MenuApp(NSObject):
             return
         screen, access = self.permissions()
         if not screen or not access:
-            self.status.setStringValue_("Grant Screen Recording and Accessibility, then restart this app.")
+            self.status.setStringValue_("Grant both macOS permissions, then restart this app.")
             return
         config.load_dotenv(config_path())
         if not os.environ.get("TYPESAFE_API_KEY"):
@@ -263,7 +263,9 @@ class MenuApp(NSObject):
         elif not active and self.result is None:
             screen, access = self.permissions()
             if not screen or not access:
-                missing = " and ".join(name for name, ok in (("Screen Recording", screen), ("Accessibility", access)) if not ok)
+                missing = " and ".join(
+                    name for name, ok in (("Screen Recording", screen), ("Device Control and Data Access", access)) if not ok
+                )
                 self.status.setStringValue_(f"Permission needed: {missing}")
         if self.run_dir is not None:
             log = self.run_dir / "run.log"
