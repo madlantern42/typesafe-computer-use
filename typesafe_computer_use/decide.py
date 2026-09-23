@@ -40,14 +40,22 @@ def fixed_actions(browser: str, email: str | None) -> dict[str, str]:
             "goal and the field's label. Only valid when a text field is focused and needs content."
         ),
         "press_enter": "Press Return to submit the focused form or field.",
-        "press_escape": "Press Escape to dismiss a dialog, menu, or popup.",
+        "press_escape": (
+            "Press Escape to dismiss a visibly open dialog, menu, or popup; the app's persistent "
+            "menu bar alone is not an open menu. Do not use on a blank or loading page: Escape "
+            "cancels page loading. If there is no visible popup, wait for the page to load instead."
+        ),
         "go_back": (
             "Go back to the previous page or screen, as the browser's Back button does. Use when the last "
             "click led somewhere that does not help and the page before it did."
         ),
         "scroll_down": "Scroll down to reveal more of the page.",
         "scroll_up": "Scroll up.",
-        "wait": "Nothing to do yet; the screen is still loading or changing.",
+        "wait": (
+            "Wait for the screen to finish loading or changing. After opening a website, a blank "
+            "or partially rendered page, or only browser toolbar/bookmark text, means wait, not "
+            "Escape: the page content has not loaded yet. Waiting may repeat while the page loads."
+        ),
         "done": "The goal is already achieved.",
         "none": "Nothing on screen or in this list helps with the goal.",
     }
