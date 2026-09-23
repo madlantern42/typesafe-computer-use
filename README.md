@@ -164,10 +164,26 @@ the local file, outside the app bundle. Keep that file private.
 In the app, click **Request Permissions** and grant **Screen & System Audio
 Recording** and **Device Control and Data Access** in macOS System Settings →
 Privacy & Security. Restart the app after granting them.
-Enter one goal and click **Start**. This is a live run, currently limited to 20
-steps. Click **Stop** in the window or menu bar to halt before the next computer
+Enter one goal and click **Start**. This is a live run using the CLI's defaults:
+100 steps, a 2-second settling delay, and up to 10 writer handoffs.
+Click **Stop** in the window or menu bar to halt before the next computer
 action, or move the pointer to the top-left corner. Runs and any errors are saved
 under `~/Library/Application Support/TypeSafe Computer Use/runs`.
+
+To use the upstream Haiku writer and Sonnet reviewer with an OpenRouter key,
+set these values in `.env`, then restart the app:
+
+```dotenv
+CLICKER_WRITER_API=anthropic
+CLICKER_WRITER_BASE_URL=https://openrouter.ai/api
+CLICKER_WRITER_API_KEY=<your OpenRouter key>
+CLICKER_WRITER_MODEL=anthropic/claude-haiku-4.5
+CLICKER_ANSWER_MODEL=anthropic/claude-sonnet-5
+```
+
+[OpenRouter's Anthropic Messages endpoint](https://openrouter.ai/docs/api/api-reference/anthropic-messages/create-messages)
+preserves the original writer's request
+format, including its disabled-thinking setting and small output limits.
 
 Quit the app before replacing it with an update, and rebuild with the same
 Developer ID and bundle ID. Replacing the bundle at the same location preserves

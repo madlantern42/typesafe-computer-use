@@ -44,7 +44,6 @@ from .runner import RunConfig, run
 from .writer import make_writer
 
 APP_NAME = "TypeSafe Computer Use"
-MAX_STEPS = 20
 
 
 def support_dir() -> Path:
@@ -202,7 +201,7 @@ class MenuApp(NSObject):
 
         def work():
             try:
-                cfg = RunConfig(goal=goal, out=self.run_dir, act=True, steps=MAX_STEPS)
+                cfg = RunConfig(goal=goal, out=self.run_dir, act=True)
 
                 def context(typesafe, history):
                     return Context(

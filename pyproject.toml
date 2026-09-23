@@ -1,6 +1,6 @@
 [project]
 name = "typesafe-computer-use"
-version = "0.2.2"
+version = "0.2.3"
 description = "Cheap, fast computer use on macOS and Windows: deterministic screen state, a TypeSafe classifier for every decision, a writer model only for free text."
 readme = "README.md"
 license = "MIT"
