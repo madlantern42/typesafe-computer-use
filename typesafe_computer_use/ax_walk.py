@@ -107,8 +107,9 @@ def node_identity(node) -> object:
 
 def subtree_key(role: str, label: str, frame: Frame | None) -> tuple | None:
     """Identity of a node for de-duplication: same role, label and frame is the same control, whatever
-    object the bridge wrapped it in. Frameless and zero-size nodes are containers and are never keyed."""
-    if frame is None or frame[2] <= 0 or frame[3] <= 0:
+    object the bridge wrapped it in. Frameless and zero-size nodes are containers and are never keyed.
+    Unnamed layout groups can share bounds while holding different descendants, so they are not keyed either."""
+    if (role == "AXGroup" and not label) or frame is None or frame[2] <= 0 or frame[3] <= 0:
         return None
     return (role, label, round(frame[0]), round(frame[1]), round(frame[2]), round(frame[3]))
 
