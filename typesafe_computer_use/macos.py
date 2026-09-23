@@ -358,8 +358,28 @@ def _ax_actions(element) -> list[str]:
 
 
 def actionable_elements(pid: int, display_w_pt: float, display_h_pt: float) -> tuple[list[AxNode], list[AxNode], bool]:
-    """Labelled controls of one process: the on-screen ones in points, the pressable off-screen ones,
-    and whether a cap cut the walk short."""
+    """Controls in the focused window and app-level UI, with one shared traversal budget.
+
+    Other windows may overlap this display while holding unrelated work. Keep menus and other
+    non-window roots, and fall back to the full app when it exposes no usable focused window.
+    """
     app = AS.AXUIElementCreateApplication(pid)
     AS.AXUIElementSetMessagingTimeout(app, AX_MESSAGE_TIMEOUT)
-    return walk_actionable(app, _ax_children, _ax_attrs, _ax_actions, display_w_pt, display_h_pt)
+    focused = _ax_attr(app, AS.kAXFocusedWindowAttribute)
+    focused_children = (
+        _ax_children(focused) if focused is not None and _ax_attr(focused, AS.kAXRoleAttribute) == "AXWindow" else []
+    )
+    if not focused_children:
+        return walk_actionable(app, _ax_children, _ax_attrs, _ax_actions, display_w_pt, display_h_pt)
+
+    roots = [focused]
+    roots.extend(child for child in _ax_children(app) if child != focused and _ax_attr(child, AS.kAXRoleAttribute) != "AXWindow")
+
+    def scoped_children(element):
+        if element == app:
+            return roots
+        if element == focused:
+            return focused_children
+        return _ax_children(element)
+
+    return walk_actionable(app, scoped_children, _ax_attrs, _ax_actions, display_w_pt, display_h_pt)

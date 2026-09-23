@@ -852,7 +852,7 @@ wheels = [
 
 [[package]]
 name = "typesafe-computer-use"
-version = "0.2.5"
+version = "0.2.6"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },

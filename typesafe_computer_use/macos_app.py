@@ -220,6 +220,8 @@ class MenuApp(NSObject):
                 self.result = ("failed", "See app-error.log in the run folder")
 
         self.worker = threading.Thread(target=work, name="typesafe-computer-use", daemon=True)
+        # Keep the controls out of the captured screen; Stop remains in the menu bar.
+        self.window.orderOut_(None)
         self.worker.start()
         self.refresh_(None)
 
@@ -255,7 +257,7 @@ class MenuApp(NSObject):
         self.menu_start.setEnabled_(not active)
         self.menu_stop.setEnabled_(active)
         if active and not macos.stop_requested():
-            self.status.setStringValue_("Running live on this Mac. Stop here or move the mouse to the top-left corner.")
+            self.status.setStringValue_("Running live. Stop from the menu bar or move the mouse to the top-left corner.")
         elif not active and self.result is not None:
             outcome, detail = self.result
             self.status.setStringValue_(f"Finished: {outcome}. {detail}".strip())
