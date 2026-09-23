@@ -166,6 +166,18 @@ Recording** and **Device Control and Data Access** in macOS System Settings →
 Privacy & Security. Restart the app after granting them.
 Enter one goal and click **Start**. This is a live run using the CLI's defaults:
 100 steps, a 2-second settling delay, and up to 10 writer handoffs.
+
+For voice input, add `SONIOX_API_KEY` to the same private `.env`. Click **Dictate**,
+allow this app's **Microphone** permission on first use, and speak a new goal.
+The field updates as you speak. Click **Done**, review or edit the final text,
+then click **Start**. **Cancel** restores the previous goal. Closing the window
+or quitting also cancels dictation. Dictation is unavailable during a computer-use run.
+
+Voice uses Soniox `stt-rt-v5` directly. Audio streams to Soniox only during dictation;
+this app does not save audio recordings. A session is limited to two minutes.
+Voice input changes only how the goal is entered; the computer-use loop is unchanged.
+See [Soniox's streaming API](https://soniox.com/docs/api-reference/stt/websocket-api).
+
 Click **Stop** in the window or menu bar to halt before the next computer
 action, or move the pointer to the top-left corner. Runs and any errors are saved
 under `~/Library/Application Support/TypeSafe Computer Use/runs`.

@@ -50,6 +50,8 @@ if _absent("Quartz"):
     _stub("Quartz").kCGHIDEventTap = 0
 if not REAL_ACCESSIBILITY:
     _stub("ApplicationServices")
+if _absent("AVFoundation"):
+    _stub("AVFoundation")
 if _absent("ocrmac"):
 
     class _OCR:
@@ -67,7 +69,7 @@ for _windows_module in ("psutil", "uiautomation", "win32api", "win32con", "win32
 import pytest  # noqa: E402
 from PIL import Image  # noqa: E402
 
-from typesafe_computer_use import macos, windows  # noqa: E402
+from typesafe_computer_use import macos, macos_voice, windows  # noqa: E402
 from typesafe_computer_use.browser import cdp  # noqa: E402
 from typesafe_computer_use.models import Item, Screen  # noqa: E402
 
@@ -92,6 +94,10 @@ def no_real_machine(monkeypatch):
     for name in ("_post", "osascript", "screenshot", "open_path"):
         monkeypatch.setattr(macos, name, refuse(f"macos.{name}"))
     monkeypatch.setattr(macos, "mouse_location", lambda: (500.0, 500.0))
+    # No permission prompts, microphone hardware initialization, or recording.
+    # Voice tests replace these boundaries with fake engines and permission callbacks.
+    for name in ("_microphone_authorization", "_request_microphone_access", "_new_audio_engine", "_start_audio_engine"):
+        monkeypatch.setattr(macos_voice, name, refuse(f"macos_voice.{name}"))
     if REAL_ACCESSIBILITY:
         for name in ("AXUIElementPerformAction", "AXUIElementSetAttributeValue"):
             monkeypatch.setattr(macos.AS, name, refuse(f"ApplicationServices.{name}"))

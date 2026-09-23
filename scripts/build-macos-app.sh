@@ -33,6 +33,8 @@ plutil -insert NSScreenCaptureUsageDescription -string \
     "Reads the visible screen to choose actions toward your goal." "$app/Contents/Info.plist"
 plutil -insert NSAppleEventsUsageDescription -string \
     "Opens and activates the apps and webpages needed for your goal." "$app/Contents/Info.plist"
+plutil -insert NSMicrophoneUsageDescription -string \
+    "Dictates a goal by streaming microphone audio to Soniox while you use Dictate." "$app/Contents/Info.plist"
 plutil -insert TypeSafeConfigPath -string "$config_path" "$app/Contents/Info.plist"
 
 # PyInstaller signs its collected code ad hoc. Sign every nested binary and the
