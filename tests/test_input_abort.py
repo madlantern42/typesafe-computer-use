@@ -17,7 +17,7 @@ def input_events(monkeypatch):
         kCGEventLeftMouseUp="up",
         kCGMouseButtonLeft=0,
         CGEventCreateMouseEvent=lambda _, kind, point, button: (kind, point),
-        CGEventCreateKeyboardEvent=lambda _, code, down: {"down": down},
+        CGEventCreateKeyboardEvent=lambda _, code, down: {"down": down, "flags": "inherited-command"},
         CGEventKeyboardSetUnicodeString=lambda event, length, text: event.update(text=text),
         kCGEventFlagMaskCommand="command",
         CGEventSetFlags=lambda event, flags: event.update(flags=flags),
@@ -51,7 +51,14 @@ def test_typing_checks_abort_between_characters_and_releases_the_key(input_event
     monkeypatch.setattr(macos, "mouse_location", lambda: (0, 0) if input_events else (500, 500))
     with pytest.raises(Abort):
         macos.type_text("abc")
-    assert input_events == [{"down": True, "text": "a"}, {"down": False, "text": "a"}]
+    assert input_events == [{"down": True, "flags": 0, "text": "a"}, {"down": False, "flags": 0, "text": "a"}]
+
+
+def test_clear_then_type_does_not_carry_command_into_delete_or_text(input_events):
+    macos.clear_field()
+    macos.type_text("g")
+    assert [event["flags"] for event in input_events] == ["command", "command", 0, 0, 0, 0]
+    assert [event.get("text") for event in input_events] == [None, None, None, None, "g", "g"]
 
 
 def test_click_releases_the_button_when_interrupted_after_mouse_down(input_events, monkeypatch):

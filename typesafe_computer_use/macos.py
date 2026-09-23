@@ -99,8 +99,9 @@ def press(key: str, command: bool = False) -> None:
 
     def event(down: bool):
         e = Quartz.CGEventCreateKeyboardEvent(None, code, down)
-        if command:
-            Quartz.CGEventSetFlags(e, Quartz.kCGEventFlagMaskCommand)
+        # New events can inherit modifier state from the previous synthetic event.
+        # In particular, Delete and text following Command-A must be unmodified.
+        Quartz.CGEventSetFlags(e, Quartz.kCGEventFlagMaskCommand if command else 0)
         return e
 
     _down_then_up(event)
@@ -108,6 +109,7 @@ def press(key: str, command: bool = False) -> None:
 
 def _unicode_key(ch: str, down: bool):
     event = Quartz.CGEventCreateKeyboardEvent(None, 0, down)
+    Quartz.CGEventSetFlags(event, 0)
     Quartz.CGEventKeyboardSetUnicodeString(event, len(ch), ch)
     return event
 
