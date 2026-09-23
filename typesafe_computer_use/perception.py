@@ -9,7 +9,7 @@ from pathlib import Path
 from PIL import Image, ImageChops, ImageStat
 
 from .config import MAX_OPTIONS, MIN_OCR_CONFIDENCE
-from .models import AxNode, Box, Item, Screen
+from .models import TEXT_ROLES, AxNode, Box, Item, Screen
 from .platform_adapter import desktop
 from .timing import OCR_RECTS, OCR_REGION_PCT, phase
 
@@ -442,7 +442,13 @@ def ax_nodes(screen: Screen, budget: int) -> tuple[list[AxNode], list[AxNode]]:
         nodes, hidden, _capped = desktop.actionable_elements(screen.pid, width_pt, height_pt)
     except Exception:
         return [], []
-    return [node for node in nodes[:budget] if node.label], [node for node in hidden if node.label]
+    if len(nodes) > budget:
+        # Dense lists can put hundreds of rows before a search field in traversal order.
+        # Keep actual text controls first, then retain the selected nodes in their original order.
+        ranked = sorted(range(len(nodes)), key=lambda i: nodes[i].role not in TEXT_ROLES)
+        kept = set(ranked[:budget])
+        nodes = [node for i, node in enumerate(nodes) if i in kept]
+    return [node for node in nodes if node.label], [node for node in hidden if node.label]
 
 
 def offscreen_controls(nodes: list[AxNode], items: list[Item]) -> list[AxNode]:

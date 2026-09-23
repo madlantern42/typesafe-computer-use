@@ -1,5 +1,11 @@
-from typesafe_computer_use.models import Item
+from dataclasses import replace
+
+import pytest
+
+from typesafe_computer_use import perception
+from typesafe_computer_use.models import TEXT_ROLES, AxNode, Item
 from typesafe_computer_use.perception import (
+    ax_nodes,
     goal_echoes,
     is_echo,
     merge_blocks,
@@ -44,6 +50,49 @@ def test_reading_order_rows_then_columns():
 def test_budget_caps_items():
     lines = [line(str(i), 100, 100 + 40 * i, 200, 130 + 40 * i) for i in range(10)]
     assert len(to_items(lines, 3)) == 3
+
+
+def ax_node(role, label, y=100):
+    return AxNode(role=role, label=label, x=100, y=y, w=150, h=30, pressable=False, ref=object())
+
+
+@pytest.mark.parametrize("role", sorted(TEXT_ROLES))
+def test_ax_budget_keeps_a_late_text_field_after_dense_rows(monkeypatch, screen, role):
+    rows = [ax_node("AXRow", f"Row {i}") for i in range(343)]
+    field = ax_node(role, "Search records")
+    monkeypatch.setattr(perception.desktop, "actionable_elements", lambda *_: ([*rows, field], [], False))
+
+    kept, hidden = ax_nodes(replace(screen, pid=123), 255)
+
+    assert kept == [*rows[:254], field]
+    assert kept[-1] is field and not hidden
+
+
+def test_ax_budget_preserves_original_order_below_limit_and_when_fields_fill_it(monkeypatch, screen):
+    row = ax_node("AXRow", "Row")
+    fields = [ax_node("AXTextField", f"Field {i}") for i in range(3)]
+    nodes = [fields[0], row, fields[1], fields[2]]
+    offscreen = ax_node("AXButton", "Next page")
+    monkeypatch.setattr(perception.desktop, "actionable_elements", lambda *_: (nodes, [offscreen], False))
+    live = replace(screen, pid=123)
+
+    assert ax_nodes(live, 4) == (nodes, [offscreen])
+    assert ax_nodes(live, 2) == (fields[:2], [offscreen])
+
+
+def test_retained_late_field_keeps_its_handle_after_merge_and_renumbering(monkeypatch, screen):
+    rows = [ax_node("AXRow", f"Row {i}", y=200 + i * 35) for i in range(343)]
+    field = ax_node("AXSearchField", "Search records", y=50)
+    monkeypatch.setattr(perception.desktop, "actionable_elements", lambda *_: ([*rows, field], [], False))
+    monkeypatch.setattr(perception, "ocr", lambda *_: [])
+    live = replace(screen, pid=123)
+
+    items = perception.perceive(live, 255, "Find a record")
+
+    assert len(items) == 255
+    assert items[0].role == "field" and items[0].text == "Search records"
+    assert live.ax_refs[items[0].index] is field.ref
+    assert live.ax_refs[items[1].index] is rows[0].ref
 
 
 def test_goal_echo_matches_wrapped_command_lines():

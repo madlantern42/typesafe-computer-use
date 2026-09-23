@@ -52,6 +52,9 @@ AX_LABEL_PARENT_ROLES = {
 # List containers keep their label in a shallow AXStaticText rather than on themselves.
 AX_LABEL_DESCENDANT_ROLES = {"AXCell", "AXRow"}
 AX_SKIP_SUBTREE_ROLES = {"AXMenu"}  # a closed menu: thousands of zero-sized items, none on screen
+# Visit surrounding navigation/forms before expanding a collection's repeated content.
+# Otherwise a wide inbox/table can exhaust the shared budget before a nested search field.
+AX_COLLECTION_ROLES = {"AXTable", "AXOutline", "AXList"}
 AX_NODE_CAP = 4000
 AX_TIME_CAP = 0.6
 AX_OFFSCREEN_CAP = 120  # off-screen controls collected before the walk stops looking for more
@@ -144,8 +147,8 @@ def walk_actionable(
     offscreen_cap: int = AX_OFFSCREEN_CAP,
     clock: Callable[[], float] = time.monotonic,
 ) -> tuple[list[AxNode], list[AxNode], bool]:
-    """Breadth-first hunt for labelled controls: the on-screen ones, the reachable off-screen ones,
-    and whether a cap cut the walk short.
+    """Breadth-first hunt for labelled controls, deferring collection contents until surrounding UI.
+    Returns the on-screen controls, reachable off-screen ones, and whether a cap cut the walk short.
 
     The four callables are the only way into the tree, so the pruning rules are platform-free
     and testable against a plain dict. The caps are the point: an unbounded walk of a note list
@@ -160,12 +163,15 @@ def walk_actionable(
     offscreen: list[AxNode] = []
     deadline = clock() + time_cap
     queue = deque([(root, "", False, False)])
+    collections = deque()
     seen = 0
     visited: set = set()  # elements compare by identity across fetches, so a self-listing app is walked once
     visited_keys: set[tuple] = set()  # and a control handed over as several distinct objects is kept once
-    while queue:
+    while queue or collections:
         if seen >= node_cap or clock() >= deadline:
             return found, offscreen, True
+        if not queue:
+            queue, collections = collections, queue
         node, parent_label, parent_emitted, hidden = queue.popleft()
         identity = node_identity(node)
         if identity in visited:
@@ -206,5 +212,6 @@ def walk_actionable(
                 x, y, w, h = frame
                 offscreen.append(AxNode(role=role, label=label, x=x, y=y, w=w, h=h, pressable=True, ref=node))
         child_label = own_label if role in AX_LABEL_PARENT_ROLES else ""
-        queue.extend((kid, child_label, emitted, hidden) for kid in kids)
+        pending = collections if role in AX_COLLECTION_ROLES else queue
+        pending.extend((kid, child_label, emitted, hidden) for kid in kids)
     return found, offscreen, False
