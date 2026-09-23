@@ -36,6 +36,17 @@ def test_corner_abort_prevents_the_click_from_moving_the_pointer(input_events, m
     assert input_events == []
 
 
+def test_menu_stop_prevents_input_even_when_pointer_is_away_from_abort_corner(input_events, monkeypatch):
+    monkeypatch.setattr(macos, "mouse_location", lambda: (500, 500))
+    macos.request_stop()
+    try:
+        with pytest.raises(Abort, match="menu bar"):
+            macos.click_at((200, 200))
+        assert input_events == []
+    finally:
+        macos.clear_stop()
+
+
 def test_typing_checks_abort_between_characters_and_releases_the_key(input_events, monkeypatch):
     monkeypatch.setattr(macos, "mouse_location", lambda: (0, 0) if input_events else (500, 500))
     with pytest.raises(Abort):

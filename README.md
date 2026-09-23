@@ -138,6 +138,43 @@ No permission prompt is needed. What differs from macOS:
 
 ## Use
 
+### Signed macOS app
+
+On macOS, build a standalone menu bar app with the same Developer ID and bundle ID on
+each update. macOS associates Screen Recording and Accessibility grants with that
+signed app identity, so rebuilding and replacing it should preserve those grants.
+The app runs capture, decisions, and input in one process. It does not need the CLI
+or a terminal open after installation.
+
+Put `TYPESAFE_API_KEY` and any writer settings in this checkout's gitignored `.env`,
+then build and install:
+
+```sh
+bash scripts/build-macos-app.sh
+mkdir -p ~/Applications
+ditto "dist/TypeSafe Computer Use.app" ~/Applications/"TypeSafe Computer Use.app"
+open ~/Applications/"TypeSafe Computer Use.app"
+```
+
+The build requires the macOS Developer ID identity named in the script. For a
+different `.env` location, pass `TYPESAFE_CONFIG_PATH=/absolute/path/.env` when
+building. The path is embedded in the app's Info.plist; the key values stay in
+the local file, outside the app bundle. Keep that file private.
+
+In the app, click **Request Permissions** and grant **Screen Recording** and
+**Accessibility** in macOS System Settings. Restart the app after granting them.
+Enter one goal and click **Start**. This is a live run, currently limited to 20
+steps. Click **Stop** in the window or menu bar to halt before the next computer
+action, or move the pointer to the top-left corner. Runs and any errors are saved
+under `~/Library/Application Support/TypeSafe Computer Use/runs`.
+
+Quit the app before replacing it with an update, and rebuild with the same
+Developer ID and bundle ID. Replacing the bundle at the same location preserves
+its macOS permission identity. For distribution to other Macs, add a secure
+timestamp, notarize, and staple the app.
+
+### Command line
+
 ```
 uv run clicker "open the Playground"                 # dry run: one step, prints what it would do
 uv run clicker "open the Playground" --act           # drives the machine, up to 100 steps

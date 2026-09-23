@@ -27,6 +27,7 @@ dependencies = [
     "typesafe-sdk==0.6.0",
     "websocket-client==1.9.0",
     "ocrmac==1.0.1; sys_platform == 'darwin'",
+    "pyobjc-framework-Cocoa==12.2.2; sys_platform == 'darwin'",
     "pyobjc-framework-ApplicationServices==12.2.2; sys_platform == 'darwin'",
     "pyobjc-framework-Quartz==12.2.2; sys_platform == 'darwin'",
     "psutil==7.2.2; sys_platform == 'win32'",
@@ -45,7 +46,7 @@ clicker-inspect = "typesafe_computer_use.cli:inspect"
 clicker-bench = "typesafe_computer_use.browser.bench:main"
 
 [dependency-groups]
-dev = ["pytest==9.1.1", "ruff==0.16.8"]
+dev = ["pytest==9.1.1", "ruff==0.16.8", "pyinstaller==6.22.3; sys_platform == 'darwin'"]
 
 [build-system]
 requires = ["hatchling==1.32.1"]

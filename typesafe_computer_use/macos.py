@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import subprocess
 import tempfile
+import threading
 import time
 from collections.abc import Callable
 from functools import partial
@@ -25,6 +26,7 @@ from .models import Abort, AxNode, Field
 
 KEYCODES = {"return": 36, "tab": 48, "escape": 53, "a": 0, "delete": 51, "[": 33}
 MIN_WINDOW_SIDE_PT = 50.0  # anything smaller is a palette or a shadow, not the window being worked in
+_stop_requested = threading.Event()
 
 # ------------------------------------------------------------------ escape hatch
 
@@ -35,9 +37,24 @@ def mouse_location() -> tuple[float, float]:
 
 
 def check_abort() -> None:
+    if _stop_requested.is_set():
+        raise Abort("stopped from the menu bar")
     x, y = mouse_location()
     if x <= ABORT_CORNER_PX and y <= ABORT_CORNER_PX:
         raise Abort("mouse in top-left corner")
+
+
+def request_stop() -> None:
+    """Ask the in-process macOS app to stop before the next machine action."""
+    _stop_requested.set()
+
+
+def stop_requested() -> bool:
+    return _stop_requested.is_set()
+
+
+def clear_stop() -> None:
+    _stop_requested.clear()
 
 
 def sleep_watching(seconds: float) -> None:
